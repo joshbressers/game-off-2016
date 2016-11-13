@@ -1,0 +1,348 @@
+<html>
+<!--
+Copyright 2016 Josh Bressers
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+-->
+
+<script>
+
+// Global variables
+
+var cursor = '▒';
+var pwnium = '䷀';
+var hero = '🤖';
+var enemy = '⛄';
+
+// Player info
+var playerX = 10;
+var playerY = 10;
+var enemyX = 20;
+var enemyY = 20;
+var Xdir = 1;
+var Ydir = 1;
+var theScore = 0;
+var theLevel = 0;
+var theDead = false;
+var inLevel = false;
+var theWin = 0;
+
+// Audio
+var introAudio = new Audio('intro.wav');
+var deadAudio = new Audio('dead.wav');
+var winAudio = new Audio('win.wav');
+var getAudio = new Audio('get.wav');
+
+
+// textarea size
+var textRows=25;
+var textCols=80;
+
+// Text we want to print
+var theText = "";
+var drawnText = "";
+var textAudio = null;
+
+// The textarea content
+var textContent = Array(textRows);
+// Initialize the textarea content array
+for (r = 0; r < textRows; r++) {
+    textContent[r] = Array(80);
+    for (c = 0; c < textCols; c++) {
+        textContent[r][c] = ' ';
+    }
+}
+
+// Add our timers
+window.setInterval(drawScreen, 100);
+window.setInterval(badGuy, 300);
+
+// Dump the textContent variable into the textarea
+function drawScreen() {
+
+    // If we're building a new level, don't do anything
+    if (theScore == -1) return;
+
+    // The game is over, loop forever;
+    if (theWin == 2) return;
+
+    var text = document.getElementById("theText");
+
+    // We have text to print
+    if (theText) {
+        if (textAudio) {
+            if (textAudio.ended) textAudio.play();
+        }
+        inLevel = false;
+        text.value = drawnText;
+        drawnText = theText.substring(0, drawnText.length + 1);
+            if (theText == drawnText) {
+                theText = "";
+                drawnText = "";
+                textAudio = null;
+                inLevel = true;
+                if (theWin == 1) theWin = 2;
+
+                // reset the board
+                if (theDead) {
+                    theDead = false;
+                    theScore = 0;
+                    theLevel = 0;
+                    main();
+                }
+
+            }
+        text.value = text.value + cursor;
+    } else {
+        // The first line is status info
+        text.value = "pwns: " + theScore;
+        text.value = text.value + "    ";
+        text.value = text.value + "level: " + theLevel;
+        text.value = text.value + "\n";
+        for (r = 0; r < textRows; r++) {
+            for (c = 0; c < textCols; c++) {
+                text.value = text.value + textContent[r][c];
+            }
+            text.value = text.value + "\n";
+        }
+    }
+}
+
+function badGuy() {
+
+    // If we're building a new level, don't do anything
+    if (theScore == -1) return;
+
+    // If we're not playing yet, do nothing
+    if (inLevel == false) return;
+
+    // Check if the player is dead before we move, in case they ran into us
+    if (playerX == enemyX && playerY == enemyY) dead();
+
+
+    textContent[enemyX][enemyY] = ' ';
+
+    if (theLevel < 4) {
+        enemyY = enemyY + Ydir;
+        enemyX = enemyX + Xdir;
+        // Are we at an edge?
+        if (enemyY > 77 || enemyY < 2) Ydir = Ydir * -1;
+        if (enemyX > 23 || enemyX < 2) Xdir = Xdir * -1;
+    } else {
+        if (enemyY < playerY) {
+            if (enemyY < 78) enemyY++;
+        } else {
+            if (enemyY > 0) enemyY--;
+        }
+
+        if (enemyX < playerX) {
+            if (enemyX < 24) enemyX++;
+        } else {
+            if (enemyX > 0) enemyX--;
+        }
+    }
+
+
+    // Check if the player is dead after we move, in case we ran into them
+    if (playerX == enemyX && playerY == enemyY) dead();
+
+    // Check if something is in the way
+    if (textContent[enemyX][enemyY] != ' ') {
+        Ydir = Ydir * -1;
+        Xdir = Xdir * -1;
+        enemyY = enemyY + Ydir;
+        enemyX = enemyX + Xdir;
+    }
+    textContent[enemyX][enemyY] = enemy;
+}
+
+function dead() {
+        deadAudio.play();
+        theDead = true;
+        theText = `
+
+
+
+######  #     # #     # ####### 
+#     # #  #  # ##    #    #    
+#     # #  #  # # #   #    #    
+######  #  #  # #  #  #    #    
+#       #  #  # #   # #    #    
+#       #  #  # #    ##    #    
+#        ## ##  #     #    #   
+                                
+`;
+}
+
+function youWin() {
+
+    textAudio = winAudio;
+    textAudio.play();
+    theWin = 1;
+    theText = `
+
+You have found all the pwnium. The bad guy cannot iwn any longer.
+
+#     # ####### #     #    #     # ### #     # 
+ #   #  #     # #     #    #  #  #  #  ##    # 
+  # #   #     # #     #    #  #  #  #  # #   # 
+   #    #     # #     #    #  #  #  #  #  #  # 
+   #    #     # #     #    #  #  #  #  #   # # 
+   #    #     # #     #    #  #  #  #  #    ## 
+   #    #######  #####      ## ##  ### #     # 
+
+
+`;
+}
+
+
+document.addEventListener('keydown', function(event) {
+
+    // If we're building a new level, don't do anything
+    if (theScore == -1) return;
+
+    // If we're not playing yet, do nothing
+    if (inLevel == false) return;
+
+    if(event.keyCode) {
+
+        textContent[playerX][playerY] = ' ';
+        switch(event.keyCode) {
+            case 37:
+            case 39:
+            case 40:
+            case 38:
+                theText = "\n\n\n\n\nn00b!! Use vi keys!    \n\n\n";
+                break;
+
+            case 72:
+                if (playerY > 0)
+                    playerY = playerY - 1;
+                break;
+            case 76:
+                if (playerY < 79)
+                    playerY = playerY + 1;
+                break;
+            case 74:
+                if (playerX < 24)
+                    playerX = playerX + 1;
+                break;
+            case 75:
+                if (playerX > 0)
+                    playerX = playerX - 1;
+                break;
+            default:
+                return;
+        }
+        // See if we're hitting something
+        if (textContent[playerX][playerY] != ' ') {
+            // We've hit something
+            if (textContent[playerX][playerY] == pwnium) {
+                getAudio.play();
+                theScore++;
+            }
+
+            // If it's not pwnium, it's probably the bad guy
+            else badGuy();
+
+            // Let's see if it's time for the next level
+            checkLevel();
+        }
+        textContent[playerX][playerY] = hero;
+    }
+});
+
+function checkLevel() {
+
+    // Check the score
+    if (theScore >= theLevel) {
+        // Next level
+        theLevel++;
+        if (theLevel == 7) {
+            youWin();
+            return;
+        }
+        theScore = -1;
+        for (i = 0; i < theLevel; i++) {
+            var x = Math.floor(Math.random() * textRows);
+            var y = Math.floor(Math.random() * textCols);
+            if (textContent[x][y] != " ") {
+                //Loop again
+                i++;
+            } else {
+                textContent[x][y] = pwnium;
+            }
+        }
+        if (theLevel > 1) {
+            theText = "\n\n\n\n\n\nYou have all the pwns!!!!   ";
+            theText = theText + "\n\nLevel: " + theLevel;
+            theText = theText + "\n\n\nREADY!      ";
+        }
+        theScore = 0;
+    }
+}
+
+function main() {
+
+    // Clear our screen array
+    for (r = 0; r < textRows; r++) {
+        for (c = 0; c < textCols; c++) {
+            textContent[r][c] = ' ';
+        }
+    }
+
+    // Print our intro
+    textAudio = introAudio;
+    textAudio.play();
+    theText = `
+The world is again in giant danger
+The bad guy have stolen all the pwnium
+Without pwnium the world will face certain death
+Only pwnterman can collect pwnium and save
+The world from the certain death
+                                               
+                                               
+    `;
+
+    // Add the player
+    playerX = 10;
+    playerY = 10;
+    textContent[playerX][playerY] = hero;
+
+    enemyX = 20;
+    enemyY = 20;
+    textContent[enemyX][enemyY] = enemy;
+
+    // Setup Level 1
+    checkLevel();
+
+
+}
+
+
+</script>
+
+<head>
+<link rel="stylesheet" media="all" href="terminal.css">
+<title>pnterman returns</title>
+</head>
+<body onload="main()">
+<div align="center" class="interlace">
+<br><br><br><br>
+<textarea rows=28 cols=81 id="theText" class="interlace">
+</textarea>
+</div>
+</body>
+</html>
+
