@@ -3,7 +3,8 @@
 ## pwnterman
 
 This is the worst game ever made. It's full of bugs, spelling errors, and
-bad graphics. On purpose.
+bad graphics. On purpose. More than two hours of time have been spent
+creating this.
 
 You can try the game here
 https://htmlpreview.github.io/?https://github.com/joshbressers/game-off-2016/blob/master/game.html
